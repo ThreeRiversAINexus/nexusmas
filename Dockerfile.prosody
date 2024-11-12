@@ -3,6 +3,10 @@ FROM prosody/prosody:0.11
 # Install netcat for healthcheck
 RUN apt-get update && apt-get install -y netcat && rm -rf /var/lib/apt/lists/*
 
+# Init prosody
+COPY setup-prosody.sh /setup-prosody.sh
+RUN chmod +x /setup-prosody.sh && /setup-prosody.sh
+
 # Copy certificates and config
 COPY certs/localhost.key /etc/prosody/certs/
 COPY certs/localhost.crt /etc/prosody/certs/
