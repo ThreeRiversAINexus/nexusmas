@@ -1,0 +1,88 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    depends_on:
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      prosody:
+        condition: service_healthy
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=nexusmas
+      - POSTGRES_USER=nexusmas
+      - POSTGRES_PASSWORD=nexusmas
+      - REDIS_HOST=redis
+      - RABBITMQ_HOST=rabbitmq
+      - XMPP_HOST=prosody
+      - XMPP_PORT=5222
+      - PYTHONPATH=/app
+    command: python -m pytest tests/test_connectivity.py -v
+
+  postgres:
+    image: postgres:14-alpine
+    environment:
+      - POSTGRES_DB=nexusmas
+      - POSTGRES_USER=nexusmas
+      - POSTGRES_PASSWORD=nexusmas
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  prosody:
+    build:
+      context: .
+      dockerfile: Dockerfile.prosody
+    ports:
+      - "5222:5222"  # Client connections (c2s)
+      - "5269:5269"  # Server-to-server (s2s)
+      - "5280:5280"  # HTTP/BOSH/WebSocket
+      - "5281:5281"  # Secure BOSH/WebSocket
+      - "5347:5347"  # XMPP component port
+    volumes:
+      - prosody_data:/var/lib/prosody
+      - prosody_logs:/var/log/prosody
+      - prosody_modules:/usr/lib/prosody-modules
+    environment:
+      - NET_BIND4_ONLY=1  # Disable IPv6
+      - LOCAL=nexusmas    # Default user
+      - DOMAIN=localhost  # Default domain
+      - PASSWORD=nexusmas # Default password
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "5222"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI
+    environment:
+      - RABBITMQ_DEFAULT_USER=nexusmas
+      - RABBITMQ_DEFAULT_PASS=nexusmas
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  prosody_data:
+  prosody_logs:
+  prosody_modules:
