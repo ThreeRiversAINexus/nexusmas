@@ -1,0 +1,26 @@
+FROM prosody/prosody:0.11
+
+# Install netcat for healthcheck
+RUN apt-get update && apt-get install -y netcat && rm -rf /var/lib/apt/lists/*
+
+# Copy certificates and config
+COPY certs/localhost.key /etc/prosody/certs/
+COPY certs/localhost.crt /etc/prosody/certs/
+COPY prosody.cfg.lua /etc/prosody/prosody.cfg.lua
+COPY init-prosody.sh /init-prosody.sh
+
+# Set proper permissions
+RUN chown -R prosody:prosody /etc/prosody/certs && \
+    chmod 644 /etc/prosody/certs/localhost.crt && \
+    chmod 600 /etc/prosody/certs/localhost.key && \
+    chmod +x /init-prosody.sh
+
+# Create required directories with proper permissions
+RUN mkdir -p /var/log/prosody /usr/lib/prosody-modules && \
+    chown -R prosody:prosody /var/log/prosody /usr/lib/prosody-modules /var/run/prosody
+
+RUN /init-prosody.sh
+
+# Use the default entrypoint script
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["prosody", "-F"]

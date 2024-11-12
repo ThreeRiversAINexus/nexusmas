@@ -1,0 +1,12 @@
+# Core dependencies
+aioxmpp  # XMPP support
+psycopg2-binary  # PostgreSQL
+redis
+pika  # RabbitMQ client
+pytest  # Testing
+pytest-asyncio  # For async tests
+pytz  # Required by aioxmpp
+
+# Additional dependencies from the codebase
+langchain  # Based on the agent system structure
+gensim  # Based on nexusgensim.py
